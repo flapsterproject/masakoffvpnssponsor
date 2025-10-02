@@ -1,12 +1,12 @@
 // main.ts
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
-const kv = await Deno.openKv();
+const kv = await Deno.openKv();    
 
 const TOKEN = Deno.env.get("BOT_TOKEN");
 const SECRET_PATH = "/masakoffvpnssponsor"; // change this
 const TELEGRAM_API = `https://api.telegram.org/bot${TOKEN}`;
-const CHANNELS = ["MasakoffVpns","AMERICAN_VPN"]; // your channels
+const CHANNELS = ["MasakoffVpns","AMERICAN_VPN", "POLO_SHXP"]; // your channels
 const ADMIN_USERNAME = "Masakoff"; // admin username without @
 
 async function getChannelTitle(channel: string): Promise<string> {
