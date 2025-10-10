@@ -59,7 +59,7 @@ async function postToChannels() {
           } catch (e) {
             console.error(`Failed to delete message in @${channel}:`, e);
           }
-        }, 10000); // 1 hour
+        }, 3600000); // 1 hour
       } else {
         console.error(`Failed to post to @${channel}:`, data.description);
       }
@@ -194,7 +194,7 @@ serve(async (req: Request) => {
     }
     await postToChannels();
     if (!intervalId) {
-      intervalId = setInterval(() => postToChannels(), 30000); // 6 hours
+      intervalId = setInterval(() => postToChannels(), 14400000); // 4 hours
     }
     await sendMessage(chatId, "Ähli kanallara ýazgy ýaýradyldy! 📢");
     return new Response("OK", { status: 200 });
