@@ -9,6 +9,8 @@ const TELEGRAM_API = `https://api.telegram.org/bot${TOKEN}`;
 const CHANNELS = ["MasakoffVpns","AMERICAN_VPN", "Kesa_VPN", "POLO_SHXP"]; // your channels
 const ADMIN_USERNAME = "Masakoff"; // admin username without @
 
+let intervalId = null;
+
 async function getChannelTitle(channel: string): Promise<string> {
   try {
     const res = await fetch(`${TELEGRAM_API}/getChat?chat_id=@${channel}`);
@@ -20,6 +22,51 @@ async function getChannelTitle(channel: string): Promise<string> {
     console.error(e);
   }
   return channel; // fallback to username if fetch fails
+}
+
+async function postToChannels() {
+  const photoIdResult = await kv.get(["current_photo_id"]);
+  const photoId = photoIdResult.value;
+  if (!photoId) {
+    console.log("No photo ID set.");
+    return;
+  }
+
+  const caption = `𝗠𝗔𝗦𝗔𝗞𝗢𝗙𝗙 𝗩𝗣𝗡𝗦 𝗦𝗣𝗢𝗡𝗦𝗢𝗥\n\n\n✨ Botumyza täze Dark Tunnel VPN koduny ýerleşdirdik!\n🔐 Indi siz has ygtybarly we çalt VPN hyzmatyndan peýdalanyp bilersiňiz.\n\n📲 Ulanmak üçin diňe botymyza girip, täze koduňyzy alyp bilersiňiz!`;
+  const inlineKeyboard = {
+    inline_keyboard: [[{ text: "👉 VPN ALMAK 👉", url: "https://t.me/MasakoffVpnsSponsorBot" }]]
+  };
+
+  for (const channel of CHANNELS) {
+    try {
+      const res = await fetch(`${TELEGRAM_API}/sendPhoto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: `@${channel}`,
+          photo: photoId,
+          caption: caption,
+          parse_mode: "HTML",
+          reply_markup: inlineKeyboard
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const messageId = data.result.message_id;
+        setTimeout(async () => {
+          try {
+            await fetch(`${TELEGRAM_API}/deleteMessage?chat_id=@${channel}&message_id=${messageId}`);
+          } catch (e) {
+            console.error(`Failed to delete message in @${channel}:`, e);
+          }
+        }, 3600000); // 1 hour
+      } else {
+        console.error(`Failed to post to @${channel}:`, data.description);
+      }
+    } catch (e) {
+      console.error(`Error posting to @${channel}:`, e);
+    }
+  }
 }
 
 serve(async (req: Request) => {
@@ -140,30 +187,14 @@ serve(async (req: Request) => {
       await sendMessage(chatId, "⚠️ Bu buýruga rugsadyňyz ýok! 🚫");
       return new Response("OK", { status: 200 });
     }
-    const photoId = await kv.get(["current_photo_id"]);
-    if (!photoId.value) {
+    const photoIdResult = await kv.get(["current_photo_id"]);
+    if (!photoIdResult.value) {
       await sendMessage(chatId, "⚠️ Ilki suraty belleň! 📸");
       return new Response("OK", { status: 200 });
     }
-    const caption = "★ Botumuza taze Dark Tunnel VPN kodu yerleșdirdik!\n🔒 Indi siz has ýokaryly we çalt VPN hyzmatyndan peýdalanyň bilersiňiz.\n📱 Ulanmak üçin düňe botumuza girip, taze koduňyzy alyň bilersiňiz!";
-    const inlineKeyboard = {
-      inline_keyboard: [[{ text: "👉 VPN ALMAK 👉", url: "https://t.me/MasakoffVpns" }]]
-    };
-    for (const channel of CHANNELS) {
-      try {
-        await fetch(`${TELEGRAM_API}/sendPhoto`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: `@${channel}`,
-            photo: photoId.value,
-            caption: caption,
-            reply_markup: inlineKeyboard
-          })
-        });
-      } catch (e) {
-        console.error(`Failed to post to @${channel}:`, e);
-      }
+    await postToChannels();
+    if (!intervalId) {
+      intervalId = setInterval(() => postToChannels(), 21600000); // 6 hours
     }
     await sendMessage(chatId, "Ähli kanallara ýazgy ýaýradyldy! 📢");
     return new Response("OK", { status: 200 });
