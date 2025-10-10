@@ -53,9 +53,21 @@ async function postToChannels() {
       const data = await res.json();
       if (data.ok) {
         const messageId = data.result.message_id;
+        // Store active message ID
+        let active = await kv.get(["active_messages", channel]);
+        let activeList = active.value || [];
+        activeList.push(messageId);
+        await kv.set(["active_messages", channel], activeList);
+
         setTimeout(async () => {
           try {
             await fetch(`${TELEGRAM_API}/deleteMessage?chat_id=@${channel}&message_id=${messageId}`);
+            // Remove from active list after deletion
+            let activeAfter = await kv.get(["active_messages", channel]);
+            if (activeAfter.value) {
+              activeAfter.value = activeAfter.value.filter((id: number) => id !== messageId);
+              await kv.set(["active_messages", channel], activeAfter.value);
+            }
           } catch (e) {
             console.error(`Failed to delete message in @${channel}:`, e);
           }
@@ -197,6 +209,33 @@ serve(async (req: Request) => {
       intervalId = setInterval(() => postToChannels(), 14400000); // 4 hours
     }
     await sendMessage(chatId, "Ähli kanallara ýazgy ýaýradyldy! 📢");
+    return new Response("OK", { status: 200 });
+  }
+
+  // Handle admin /stoppost command
+  if (text === "/stoppost") {
+    if (username !== ADMIN_USERNAME) {
+      await sendMessage(chatId, "⚠️ Bu buýruga rugsadyňyz ýok! 🚫");
+      return new Response("OK", { status: 200 });
+    }
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    for (const channel of CHANNELS) {
+      const active = await kv.get(["active_messages", channel]);
+      if (active.value) {
+        for (const msgId of active.value) {
+          try {
+            await fetch(`${TELEGRAM_API}/deleteMessage?chat_id=@${channel}&message_id=${msgId}`);
+          } catch (e) {
+            console.error(`Failed to delete message ${msgId} in @${channel}:`, e);
+          }
+        }
+        await kv.delete(["active_messages", channel]);
+      }
+    }
+    await sendMessage(chatId, "Ýaýradylmak dowam etdirilmedi we ähli ýazgylar pozuldy! 🛑");
     return new Response("OK", { status: 200 });
   }
 
