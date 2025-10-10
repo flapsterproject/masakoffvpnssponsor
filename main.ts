@@ -42,6 +42,7 @@ serve(async (req: Request) => {
   const messageId = callbackQuery?.message?.message_id;
   const username = message?.from?.username;
   const document = message?.document;
+  const photo = message?.photo;
 
   if (!chatId || !userId) return new Response("No chat ID or user ID", { status: 200 });
 
@@ -98,6 +99,17 @@ serve(async (req: Request) => {
     return new Response("OK", { status: 200 });
   }
 
+  // Handle admin /setphoto command
+  if (text === "/setphoto") {
+    if (username !== ADMIN_USERNAME) {
+      await sendMessage(chatId, "⚠️ Bu buýruga rugsadyňyz ýok! 🚫");
+      return new Response("OK", { status: 200 });
+    }
+    await kv.set(["admin_state", chatId], "waiting_for_photo");
+    await sendMessage(chatId, "Maňa suraty iberiň. 📸");
+    return new Response("OK", { status: 200 });
+  }
+
   // Handle file upload from admin
   if (document) {
     const state = await kv.get(["admin_state", chatId]);
@@ -108,6 +120,53 @@ serve(async (req: Request) => {
       await sendMessage(chatId, "Faýl üstünlikli täzelendi! ✅📄");
       return new Response("OK", { status: 200 });
     }
+  }
+
+  // Handle photo upload from admin
+  if (photo && photo.length > 0) {
+    const state = await kv.get(["admin_state", chatId]);
+    if (state.value === "waiting_for_photo" && username === ADMIN_USERNAME) {
+      const fileId = photo[photo.length - 1].file_id;
+      await kv.set(["current_photo_id"], fileId);
+      await kv.delete(["admin_state", chatId]);
+      await sendMessage(chatId, "Surat üstünlikli täzelendi! ✅📸");
+      return new Response("OK", { status: 200 });
+    }
+  }
+
+  // Handle admin /startpost command
+  if (text === "/startpost") {
+    if (username !== ADMIN_USERNAME) {
+      await sendMessage(chatId, "⚠️ Bu buýruga rugsadyňyz ýok! 🚫");
+      return new Response("OK", { status: 200 });
+    }
+    const photoId = await kv.get(["current_photo_id"]);
+    if (!photoId.value) {
+      await sendMessage(chatId, "⚠️ Ilki suraty belleň! 📸");
+      return new Response("OK", { status: 200 });
+    }
+    const caption = "★ Botumuza taze Dark Tunnel VPN kodu yerleșdirdik!\n🔒 Indi siz has ýokaryly we çalt VPN hyzmatyndan peýdalanyň bilersiňiz.\n📱 Ulanmak üçin düňe botumuza girip, taze koduňyzy alyň bilersiňiz!";
+    const inlineKeyboard = {
+      inline_keyboard: [[{ text: "👉 VPN ALMAK 👉", url: "https://t.me/MasakoffVpns" }]]
+    };
+    for (const channel of CHANNELS) {
+      try {
+        await fetch(`${TELEGRAM_API}/sendPhoto`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: `@${channel}`,
+            photo: photoId.value,
+            caption: caption,
+            reply_markup: inlineKeyboard
+          })
+        });
+      } catch (e) {
+        console.error(`Failed to post to @${channel}:`, e);
+      }
+    }
+    await sendMessage(chatId, "Ähli kanallara ýazgy ýaýradyldy! 📢");
+    return new Response("OK", { status: 200 });
   }
 
   // Handle /start command
