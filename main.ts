@@ -32,7 +32,7 @@ async function postToChannels() {
     return;
   }
 
-  const caption = `𝗠𝗔𝗦𝗔𝗞𝗢𝗙𝗙 𝗩𝗣𝗡𝗦 𝗦𝗣𝗢𝗡𝗦𝗢𝗥\n\n\n✨ Botumyza täze Dark Tunnel VPN koduny ýerleşdirdik!\n🔐 Indi siz has ygtybarly we çalt VPN hyzmatyndan peýdalanyp bilersiňiz.\n\n📲 Ulanmak üçin diňe botymyza girip, täze koduňyzy alyp bilersiňiz!`;
+  const caption = `𝗠𝗔𝗦𝗔𝗞𝗢𝗙𝗙 𝗩𝗣𝗡𝗦 𝗦𝗣𝗢𝗡𝗦𝗢𝗥\n\n✨ Botumyza täze Dark Tunnel VPN koduny ýerleşdirdik!\n🔐 Indi siz has ygtybarly we çalt VPN hyzmatyndan peýdalanyp bilersiňiz.\n\n📲 Ulanmak üçin diňe botymyza girip, täze koduňyzy alyp bilersiňiz!`;
   const inlineKeyboard = {
     inline_keyboard: [[{ text: "👉 VPN ALMAK 👉", url: "https://t.me/MasakoffVpnsSponsorBot" }]]
   };
